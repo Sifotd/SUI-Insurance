@@ -18,7 +18,7 @@ module unswap2::unswap2 {
 
 //恒定乘积公式 x*y=k
 //
-module  unswap2::swap{
+module  unswap2::swap {
     use sui::balance;
     use sui::balance::Balance;
     use sui::coin::into_balance;
@@ -32,65 +32,69 @@ module  unswap2::swap{
     use coins::coin_a::COIN_A;
     use coins::coin_b;
     use coins::coin_a;
+
     //初始化k为1万
     //COIN_A * COIN_B =1W
-  const  Total :u64=10000;
+    const Total: u64 = 10000;
 
     //池子
-    public struct Unswap<phantom COIN_A, phantom COIN_B> has key,store{
-    id:UID,
-    A:Balance<COIN_A>,
-    B:Balance<COIN_B>,
-}
+    public struct Unswap<phantom COIN_A, phantom COIN_B> has key, store {
+        id: UID,
+        A: Balance<COIN_A>,
+        B: Balance<COIN_B>,
+    }
+
     // public  struct Admin has ket,store{
     //     id:UID,
     // }
     //交易所A
-    public  struct DexA<phantom COIN_A,phantom COIN_B> has key ,store{
-        id:UID,
-        A:Balance<COIN_A>,
-        B:Balance<COIN_B>,
+    public struct DexA<phantom COIN_A, phantom COIN_B> has key, store {
+        id: UID,
+        A: Balance<COIN_A>,
+        B: Balance<COIN_B>,
     }
 
 
     //交易所B
-    public  struct DexB<phantom COIN_A,phantom COIN_B> has key ,store{
-        id:UID,
-        A:Balance<COIN_A>,
-        B:Balance<COIN_B>,
+    public struct DexB<phantom COIN_A, phantom COIN_B> has key, store {
+        id: UID,
+        A: Balance<COIN_A>,
+        B: Balance<COIN_B>,
     }
+
     //借款人
-    public struct Admin <phantom COIN_A,phantom COIN_B>has key,store{
-        id:UID,
-        A:Balance<COIN_A>,
-        B:Balance<COIN_B>,
+    public struct Admin<phantom COIN_A, phantom COIN_B>has key, store {
+        id: UID,
+        A: Balance<COIN_A>,
+        B: Balance<COIN_B>,
     }
+
     //初始化
-    fun init (ctx:&mut TxContext){
-        let univ2 = Unswap<COIN_A,COIN_B>{
-            id:object::new(ctx),
-            A:balance::zero(),
-            B:balance::zero(),
+    fun init(ctx: &mut TxContext) {
+        let univ2 = Unswap<COIN_A, COIN_B> {
+            id: object::new(ctx),
+            A: balance::zero(),
+            B: balance::zero(),
         };
-        let admin = Admin<COIN_A,COIN_B>{
-            id:object::new(ctx),
-            A:balance::zero(),
-            B:balance::zero(),
+        let admin = Admin<COIN_A, COIN_B> {
+            id: object::new(ctx),
+            A: balance::zero(),
+            B: balance::zero(),
         };
-        let dexA =DexA<COIN_A,COIN_B>{
-            id:object::new(ctx),
-            A:balance::zero(),
-            B:balance::zero(),
+        let dexA = DexA<COIN_A, COIN_B> {
+            id: object::new(ctx),
+            A: balance::zero(),
+            B: balance::zero(),
         };
-        let dexB =DexA<COIN_A,COIN_B>{
-            id:object::new(ctx),
-            A:balance::zero(),
-            B:balance::zero(),
+        let dexB = DexB<COIN_A, COIN_B> {
+            id: object::new(ctx),
+            A: balance::zero(),
+            B: balance::zero(),
         };
-        //所有权转移
+
         share_object(univ2);
-        public_transfer(admin,ctx.sender());
-        //交易所是公共的
+        public_transfer(admin, ctx.sender());
+
         share_object(dexA);
         share_object(dexB);
     }
@@ -100,75 +104,98 @@ module  unswap2::swap{
     //操作：交易所B 人（已准备）
     //操作对象：COIN （已准备）
 
-   //传入交易所，借钱数量
-   //在另一个交易所高价卖出
-    public  entry  fun fl(dex_a:&mut DexA<COIN_A,COIN_B>,dex_b:&mut DexB<COIN_A,COIN_B>,amt:u64,admin:&mut Admin<COIN_A,COIN_B>,ctx:&mut TxContext){
-       //从A交易所借钱
-       let brrow_money = balance::split(&mut dex_a.A,amt);
-       //给借款人
-       admin.A.join(brrow_money);
-       //我现在拥有的B的数量
-       let own_money = balance::value(&admin.B);
-       //现在我在B交易所卖掉A,得到COINB
-       let sold_A= balance::split(&mut admin.A,amt);
-       dex_b.A.join(sold_A);
+    //传入交易所，借钱数量
+    //在另一个交易所高价卖出
 
-       let earn_money = balance::split(&mut dex_b.B,amt*2);
-       admin.B.join(earn_money);
+    public entry fun fl(
+        dex_a: &mut DexA<COIN_A, COIN_B>,
+        dex_b: &mut DexB<COIN_A, COIN_B>,
+        amt: u64,
+        admin: &mut Admin<COIN_A, COIN_B>,
+        ctx: &mut TxContext
+    ) {
+        //从A交易所借钱
+        let brrow_money = balance::split(&mut dex_a.A, amt);
+        //给借款人
+        admin.A.join(brrow_money);
+        //我现在拥有的B的数量
+        let own_money = balance::value(&admin.B);
+        //现在我在B交易所卖掉A,得到COINB
+        let sold_A = balance::split(&mut admin.A, amt);
+        dex_b.A.join(sold_A);
 
-       //比较我是否赚钱
-       let own_money_2 =balance::value(&admin.B);
+        let earn_money = balance::split(&mut dex_b.B, amt * 2);
+        admin.B.join(earn_money);
 
-       if (own_money>= own_money_2){
-           abort (0);
-       };
+        //比较我是否赚钱
+        let own_money_2 = balance::value(&admin.B);
 
-       //还钱给A交易所
-       //1 将COIN_B换成COIN_A
-       let huan_coin_b= balance::split(&mut admin.B,amt*3/2);
+        if (own_money >= own_money_2) {
+            abort (0);
+        };
+
+        //还钱给A交易所
+        //1 将COIN_B换成COIN_A
+        let huan_coin_b = balance::split(&mut admin.B, amt * 3 / 2);
         dex_a.B.join(huan_coin_b);
 
-       let h = balance::split(&mut dex_a.A,amt);
-       balance::join(&mut admin.A,h);
-       //开始还钱
-       let huan_= balance::split(&mut admin.A,amt);
-       dex_a.A.join(huan_);
+        let h = balance::split(&mut dex_a.A, amt);
+        balance::join(&mut admin.A, h);
+        //开始还钱
+        let huan_ = balance::split(&mut admin.A, amt);
+        dex_a.A.join(huan_);
+    }
 
-   }
     //change 汇率收钱
-    public entry  fun swap(bank:&mut DexA<COIN_A,COIN_B>,bank2:&mut DexB<COIN_A,COIN_B>,people:&mut Admin<COIN_A,COIN_B>,amt:u64){
+    public entry fun swap(
+        bank: &mut DexA<COIN_A, COIN_B>,
+        bank2: &mut DexB<COIN_A, COIN_B>,
+        people: &mut Admin<COIN_A, COIN_B>,
+        amt: u64
+    ) {
         //people 要用 amt数量的tokenA换tokenB,手续费是千分之三
         // 1 获取彼此的余额
         let people_own = balance::value(&people.A);
-        let dex_value =balance::value(&bank.B);
+        let dex_value = balance::value(&bank.B);
 
         //假设收以people的token_a为手续费
-       if(people_own<=amt){
-           abort (0);
-       };
-        let true_amt = amt*997/1000;
-        let shou_xu = amt*3/1000;
+        if (people_own <= amt) {
+            abort (0);
+        };
+        let true_amt = amt * 997 / 1000;
+        let shou_xu = amt * 3 / 1000;
         //开始转换
-        if(dex_value < true_amt*3/2){
+        if (dex_value < true_amt * 3 / 2) {
             abort (0)
         };
-        let true_cbalanze = balance::split(&mut people.A,true_amt);
-        let shou_cbalanze = balance::split(&mut people.A,shou_xu);
+        let true_cbalanze = balance::split(&mut people.A, true_amt);
+        let shou_cbalanze = balance::split(&mut people.A, shou_xu);
 
         //收手续费
         bank2.A.join(shou_cbalanze);
 
         //开始转移
-         bank.A.join(true_cbalanze);
+        bank.A.join(true_cbalanze);
 
-        let transfert_balance = balance::split(&mut bank.B,true_amt*3/2);
+        let transfert_balance = balance::split(&mut bank.B, true_amt * 3 / 2);
 
         people.B.join(transfert_balance);
-
-
-
-
     }
-
-
 }
+/*
+0x710f0b67e83dba7e3373e4638558d470791e9642cf84a282f0cb17a60a4d19c1::swap::DexA<0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_a::COIN_A, 0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_b::COIN_B>
+0x589a1e902533a0d207407b3e5ce116fe3ee377398ded71d201bf590d2fad9cd1
+
+0x710f0b67e83dba7e3373e4638558d470791e9642cf84a282f0cb17a60a4d19c1::swap::DexB<0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_a::COIN_A, 0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_b::COIN_B>
+0x9fb1efd7d5c4be9c99b07dcd8e973376e07be0690ae9e75edbf7bd98a09378a5
+
+0x710f0b67e83dba7e3373e4638558d470791e9642cf84a282f0cb17a60a4d19c1::swap::Unswap<0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_a::COIN_A, 0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_b::COIN_B>
+0xd3d82057dffbecfb4a0e0296c5614e9648276f609b50b88ae319d75c1c40459b
+
+0x710f0b67e83dba7e3373e4638558d470791e9642cf84a282f0cb17a60a4d19c1::swap::Admin<0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_a::COIN_A, 0xe1961f97ecd226cc14fa1e8f86ae15892d69e7226b280b54d0ddaa04587c51f7::coin_b::COIN_B>
+0x392328b9090e75525b4294c65223f8aceaf83a64691295c260dbd1358fd0c25d
+
+*/
+
+
+
